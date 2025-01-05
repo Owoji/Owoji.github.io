@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oji Radar Tasks Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://c4.wallpaperflare.com/wallpaper/114/365/202/5bd2aab2cc093-wallpaper-preview.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #f4f4f4;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: rgba(0, 0, 0, 0);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        h1, label {
+            color: #FFD700;
+        }
+
+        label, input, button {
+            display: block;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        input[type="number"], input[type="time"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+        }
+
+        button {
+            background-color: #FFD700;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 10px 20px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #ffbb00;
+        }
+
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #00FF00;
+        }
+
+        #task-plan {
+            margin-top: 20px;
+            color: #00FF00;
+        }
+
+        .clock {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        #current-date {
+            font-size: 14px;
+            color: #FFD700;
+        }
+
+        .toggle-container {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            color: #FFD700;
+        }
+
+        .toggle-container input {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Oji Radar Tasks Calculator</h1>
+
+        <!-- Maximum Storage Capacity -->
+        <div>
+            <label for="capacity">Maximum Storage Capacity: </label>
+            <input type="number" id="capacity" placeholder="Enter max capacity" min="1">
+        </div>
+
+        <!-- Current Stored Tasks -->
+        <div>
+            <label for="current-tasks">Current Stored Tasks: </label>
+            <input type="number" id="current-tasks" placeholder="Enter current tasks" min="0">
+        </div>
+
+        <!-- Tasks Added Per Refresh -->
+        <div>
+            <label for="tasks-per-refresh">How many tasks do you get every refresh (6 hours): </label>
+            <input type="number" id="tasks-per-refresh" placeholder="Enter tasks per refresh" min="1">
+        </div>
+
+        <!-- Time Until Next Refresh -->
+        <div>
+            <label for="time-to-next-refresh">In how long are additional tasks (HH:MM): </label>
+            <input type="time" id="time-to-next-refresh">
+        </div>
+
+        <!-- Task Collection Time -->
+        <div>
+            <label for="collection-time">Estimated time to collect tasks (HH:MM) CET: </label>
+            <input type="time" id="collection-time">
+        </div>
+
+        <!-- "Today" or "Tomorrow" Toggle -->
+        <div class="toggle-container">
+            <label for="collection-time-toggle">Collection time for:</label>
+            <input type="radio" id="today" name="collection-time-toggle" value="today" checked>
+            <label for="today">Today</label>
+            <input type="radio" id="tomorrow" name="collection-time-toggle" value="tomorrow">
+            <label for="tomorrow">Tomorrow</label>
+        </div>
+
+        <!-- Calculate Button -->
+        <button onclick="calculate()">Calculate</button>
+
+        <!-- Message and Task Plan -->
+        <div id="message"></div>
+        <div id="task-plan"></div>
+
+        <!-- Real-time Clock -->
+        <div class="clock">
+            Current Time (CET): <span id="current-time"></span>
+        </div>
+
+        <div id="current-date"></div>
+    </div>
+
+    <script>
+        // Update the real-time clock
+        function updateClock() {
+            const currentTime = new Date().toLocaleTimeString('en-GB', { timeZone: 'CET' });
+            document.getElementById('current-time').textContent = currentTime;
+
+            const currentDate = new Date().toLocaleDateString('en-GB', { timeZone: 'CET' });
+            document.getElementById('current-date').textContent = `Current Date (CET): ${currentDate}`;
+        }
+        setInterval(updateClock, 1000); // Update every second
+        updateClock(); // Initial call to populate the clock immediately
+
+        // The calculate function
+        function calculate() {
+            const capacity = parseInt(document.getElementById('capacity').value, 10);
+            const currentTasks = parseInt(document.getElementById('current-tasks').value, 10);
+            const tasksPerRefresh = parseInt(document.getElementById('tasks-per-refresh').value, 10);
+
+            const nextRefreshTime = document.getElementById('time-to-next-refresh').value;
+            const collectionTime = document.getElementById('collection-time').value;
+
+            if (!capacity || !currentTasks || !tasksPerRefresh || !nextRefreshTime || !collectionTime) {
+                alert("Please fill in all fields correctly.");
+                return;
+            }
+
+            const currentDate = new Date();
+            // Convert time remaining for refresh (in HH:MM) to milliseconds
+            const [hours, minutes] = nextRefreshTime.split(':').map(num => parseInt(num, 10));
+            const nextRefreshMillis = (hours * 60 + minutes) * 60000; // time remaining in ms
+
+            // Calculate next refresh time by adding the remaining time to the current time
+            const refreshDate = new Date(currentDate.getTime() + nextRefreshMillis);
+
+            // Convert collection time to a Date object for comparison
+            const [collHours, collMinutes] = collectionTime.split(':').map(num => parseInt(num, 10));
+            let collectDate = new Date(currentDate.setHours(collHours, collMinutes, 0, 0));
+
+            // Check if the user chose "Tomorrow"
+            const isTomorrow = document.getElementById('tomorrow').checked;
+            if (isTomorrow) {
+                collectDate.setDate(collectDate.getDate() + 1); // Move the collection time to tomorrow
+            }
+
+            let tasks = currentTasks;
+            let nextRefresh = refreshDate;
+
+            // Accumulate tasks every 6 hours from the first refresh time until the collection time
+            let totalCycles = 0;
+            while (nextRefresh <= collectDate) {
+                tasks += tasksPerRefresh; // Add tasks every 6 hours
+                nextRefresh.setHours(nextRefresh.getHours() + 6); // Update to the next refresh time
+                totalCycles++;
+            }
+
+            const messageEl = document.getElementById('message');
+            if (tasks >= capacity) {
+                const excess = tasks - capacity + 1; // How many tasks to claim now to avoid overcapacity
+                // Calculate how many tasks are available to collect now
+                const tasksToCollectNow = Math.min(excess, currentTasks);
+                messageEl.textContent = `You will exceed the capacity by ${collectDate.toLocaleTimeString('en-GB', { timeZone: 'CET' })}. Collect at least ${tasksToCollectNow} task(s) now.`;
+                messageEl.style.color = '#FF0000'; // Red text for excess
+            } else {
+                messageEl.textContent = `You will not exceed the capacity by ${collectDate.toLocaleTimeString('en-GB', { timeZone: 'CET' })}. You will have ${tasks} tasks by then. No need to collect tasks now.`;
+                messageEl.style.color = '#00FF00'; // Green text if under capacity
+            }
+
+            const taskPlanEl = document.getElementById('task-plan');
+            taskPlanEl.innerHTML = `
+                Total Refresh Cycles: ${totalCycles} <br>
+                Tasks added during these cycles: ${totalCycles * tasksPerRefresh} tasks <br>
+                Total tasks accumulated: ${tasks}
+            `;
+        }
+    </script>
+</body>
+</html>
